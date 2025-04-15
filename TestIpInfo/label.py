@@ -1,0 +1,87 @@
+
+import pandas as pd
+from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
+def is_abnormal_packet(packet, port_usage_counts, uncommon_ports, uncommon_port_threshold=1024):
+    total_data_size = packet['字节数'] / packet['包数']
+    is_abnormal = False
+    abnormal_type = None
+
+    # 规则1: 数据量过大
+    if total_data_size > 1500:  # 超过1500字节
+        is_abnormal = True
+        abnormal_type = "data_size"
+
+    # 规则2: 工作时间规则 (比如，假设工作时间为5 AM - 24 PM)
+    timestamp = packet['开始时间']
+    if timestamp.hour < 5 or timestamp.hour > 24:
+        if is_abnormal:
+            abnormal_type += "_time"
+        else:
+            is_abnormal = True
+            abnormal_type = "time"
+
+    # 规则3: 端口异常检测（仅检查是否为不常见端口）
+    # source_port = packet['源端口']
+    # destination_port = packet['目的端口']
+    #
+    # known_ports = [20, 21, 22, 23, 25, 53, 80, 110, 139, 143, 443, 445, 3389]  # 一些熟知端口示例
+    # common_software_ports = [8080, 6379, 5173, 1433, 1521, 27017, 5432, 9090]  # 常用软件端口示例
+    # all_excluded_ports = known_ports + common_software_ports
+    #
+    # # 检查是否为不常见端口且不在排除列表中
+    # if (source_port > uncommon_port_threshold or destination_port > uncommon_port_threshold) and \
+    #         source_port not in all_excluded_ports and destination_port not in all_excluded_ports:
+    #     if is_abnormal:
+    #         abnormal_type += "_port"
+    #     else:
+    #         is_abnormal = True
+    #         abnormal_type = "port"
+
+    # 规则4: TCP 标志位异常检测
+    tcp_flags = packet['TCP标志位']
+    # UAPRSF
+    normal_flag_combinations = ['-A--S-', '-AP---', '-A----', '------', '----S-']
+    if tcp_flags not in normal_flag_combinations:
+        if is_abnormal:
+            abnormal_type += "_flag"
+        else:
+            is_abnormal = True
+            abnormal_type = "flag"
+
+    return is_abnormal, abnormal_type
+
+
+data_chunks = []
+result_list = []
+abnormal_counts = {"data_size": 0, "time": 0, "port": 0, "flag": 0, "combined": 0}
+
+# 预计算端口相关数据结构，用于在判断每个数据包时提高效率
+port_usage_counts = pd.read_csv('data/sample-data-202404/sample-data-202404.csv').groupby('源端口').size()
+uncommon_ports = port_usage_counts[port_usage_counts.index > 1024].index
+
+for chunk in pd.read_csv('data/sample-data-202404/sample-data-202404.csv', chunksize=1000, parse_dates=['开始时间']):
+    print("已经处理1000条数据")
+    data_chunks.append(chunk)
+
+    for _, packet in chunk.iterrows():
+        is_abnormal, abnormal_type = is_abnormal_packet(packet, port_usage_counts, uncommon_ports)
+        result_list.append({'result': 1 if is_abnormal else 0})
+        if is_abnormal:
+            if "_" in abnormal_type:
+                abnormal_counts["combined"] += 1
+                for key in abnormal_counts.keys():
+                    if key in abnormal_type:
+                        abnormal_counts[key] += 1
+            else:
+                abnormal_counts[abnormal_type] += 1
+
+print("不同类型异常的个数：")
+for key, value in abnormal_counts.items():
+    print(f"{key}: {value}")
+
+result_df = pd.DataFrame(result_list)
+abnormal_ratio = (result_df['result'] == 1).mean()
+print("异常的比例为:", abnormal_ratio)
+result_df.columns = ['label']
+# 导出到CSV文件
+result_df.to_csv("data/sample-data-202404/sample-label-202404.csv", index=False)
