@@ -1,0 +1,40 @@
+"""规则配置包初始化文件"""
+
+from .time_rules import (
+    DEFAULT_TIME_RULES,
+    BUSINESS_HOURS_RULES,
+    NIGHT_HOURS_RULES
+)
+
+from .protocol_rules import (
+    DEFAULT_PROTOCOL_RULES,
+    STRICT_SECURITY_RULES,
+    WEB_APP_RULES
+)
+
+from .routing_rules import (
+    DEFAULT_ROUTING_RULES,
+    INTERNAL_NETWORK_RULES,
+    DMZ_RULES
+)
+
+from .scale_rules import (
+    DEFAULT_SCALE_RULES,
+    LOW_TRAFFIC_RULES,
+    HIGH_TRAFFIC_RULES
+)
+
+__all__ = [
+    'DEFAULT_TIME_RULES',
+    'BUSINESS_HOURS_RULES',
+    'NIGHT_HOURS_RULES',
+    'DEFAULT_PROTOCOL_RULES',
+    'STRICT_SECURITY_RULES',
+    'WEB_APP_RULES',
+    'DEFAULT_ROUTING_RULES',
+    'INTERNAL_NETWORK_RULES',
+    'DMZ_RULES',
+    'DEFAULT_SCALE_RULES',
+    'LOW_TRAFFIC_RULES',
+    'HIGH_TRAFFIC_RULES'
+] 
