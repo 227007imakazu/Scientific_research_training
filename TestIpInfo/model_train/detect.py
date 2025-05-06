@@ -10,6 +10,9 @@ def detect_anomalies(filtered_df,method='ensemble'):
     method:'ensemble' or 'stacking' or 'weighted'
     """
     try:
+        # 保存原始IP地址
+        original_src_ip = filtered_df['src_ip'].copy()
+        original_des_ip = filtered_df['des_ip'].copy()
         # 加载模型和scaler
         model_dir = "../model"
         rf_model = joblib.load(f"{model_dir}/rf_model.joblib")
@@ -36,7 +39,9 @@ def detect_anomalies(filtered_df,method='ensemble'):
         else:
             raise ValueError("不支持的组合方法")
 
-
+        # 分离正常和异常数据前恢复原始IP
+        filtered_df['src_ip'] = original_src_ip
+        filtered_df['des_ip'] = original_des_ip
         # 分离正常和异常数据
         filtered_df['is_anomaly'] = final_pred
         normal_data = filtered_df[~filtered_df['is_anomaly']].drop('is_anomaly', axis=1)

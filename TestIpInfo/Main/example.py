@@ -1,3 +1,4 @@
+from ip_blacklist.blacklist import BlacklistManager
 from model_train.detect import detect_anomalies
 from rules_match.rule_engine import RuleEngine
 import pandas as pd
@@ -17,6 +18,10 @@ from common.load_data import load
 def main():
     # 创建规则引擎实例
     engine = RuleEngine()
+
+    # 创建数据库实例
+    blacklist_mgr = BlacklistManager()
+
     
     # 使用预定义的规则集
     engine.update_rules("time", DEFAULT_TIME_RULES)
@@ -30,6 +35,8 @@ def main():
         df=load("../data/fake_data/model_train_data.csv")
 
         # 1. 读取黑名单过滤
+        blacklist_mgr.update_blacklist_by_df(df) # 更新黑名单
+        df = blacklist_mgr.filter_blacklist(df)  # 只保留src和des都不在黑名单的数据
 
         # 2. 应用规则过滤
         normal_data, rule_anomaly_data = engine.apply_rules(df)
@@ -39,6 +46,8 @@ def main():
         model_normal_data, model_anomaly_data = detect_anomalies(normal_data, method='stacking')
 
         # 4. 异常数据-结合系数判断是否入黑名单
+        blacklist_mgr.update_blacklist_by_rule_anomaly(model_anomaly_data)  # 规则异常
+        blacklist_mgr.update_blacklist_by_model_anomaly(model_anomaly_data)  # 模型检测异常
 
         # 5. 输出过滤结果/异常结果
         print(f"\n过滤统计:")
